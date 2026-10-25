@@ -1,20 +1,20 @@
 <div align="center">
 
-<a href="https://github.com/herdodp/snapgent-connector">
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=800&size=52&duration=3000&pause=1000&color=FACC15&center=true&vCenter=true&width=600&height=90&lines=snapgentV3;%3E+AI+agent+for+Roblox+Studio" alt="snapgentV3" />
+<a href="https://github.com/SharkCreepy/NyxV2-connector">
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=800&size=52&duration=3000&pause=1000&color=FACC15&center=true&vCenter=true&width=600&height=90&lines=NyxV2;%3E+AI+agent+for+Roblox+Studio" alt="NyxV2" />
 </a>
 
 <p><b>Turn any AI chat into an agent that builds your Roblox game.</b></p>
 
 [![License](https://img.shields.io/badge/LICENSE-GPL--3.0-FACC15?style=flat-square&labelColor=111111&logo=opensourceinitiative&logoColor=FACC15)](LICENSE)
 [![Manifest](https://img.shields.io/badge/MANIFEST-V3-FACC15?style=flat-square&labelColor=111111&logo=googlechrome&logoColor=FACC15)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3/)
-[![Release](https://img.shields.io/badge/RELEASE-V3-FACC15?style=flat-square&labelColor=111111&logo=semanticrelease&logoColor=FACC15)](https://github.com/herdodp/snapgent-connector/releases)
+[![Release](https://img.shields.io/badge/RELEASE-NyxV2-FACC15?style=flat-square&labelColor=111111&logo=semanticrelease&logoColor=FACC15)](https://github.com/SharkCreepy/NyxV2-connector/releases/tag/NyxV2)
 [![MCP](https://img.shields.io/badge/PROTOCOL-MCP-FACC15?style=flat-square&labelColor=111111&logo=modelcontextprotocol&logoColor=FACC15)](https://modelcontextprotocol.io/)
 
 </div>
 
 ```console
-herdo@snapgent:~$ snapgentV3
+herdo@NyxV2:~$ NyxV2
 
   ███████╗███╗   ██╗ █████╗ ██████╗  ██████╗ ███████╗███╗   ██╗████████╗
   ██╔════╝████╗  ██║██╔══██╗██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝
@@ -27,7 +27,7 @@ herdo@snapgent:~$ snapgentV3
   > no API key · no terminal · no copy-paste
 ```
 
-snapgentV3 is a browser extension plus a local bridge that lets a normal AI chat **read, edit, run, and inspect your Roblox project** through Roblox Studio's built-in MCP server. Describe what you want in plain language — the extension forwards the AI's commands to the bridge on your computer, and the results go straight back into the chat.
+NyxV2 is a browser extension plus a local bridge that lets a normal AI chat **read, edit, run, and inspect your Roblox project** through Roblox Studio's built-in MCP server. Describe what you want in plain language — the extension forwards the AI's commands to the bridge on your computer, and the results go straight back into the chat.
 
 **Free and open source — no API key, subscription, or sign-in required.** DeepSeek is the recommended provider. VS Code and other MCP servers can also be used as optional configured targets.
 
@@ -62,13 +62,13 @@ Explore instances, inspect Studio state, and search your game from chat.
 
 ```
 ┌─────────────┐     plain-text      ┌──────────────────┐    WebSocket    ┌────────────┐    MCP    ┌────────────────┐
-│  AI chat    │ ───  commands  ───▶ │ snapgentV3       │ ──────────────▶ │  Bridge    │ ────────▶ │ Roblox Studio  │
+│  AI chat    │ ───  commands  ───▶ │ NyxV2       │ ──────────────▶ │  Bridge    │ ────────▶ │ Roblox Studio  │
 │  (browser)  │ ◀──  results   ───  │ browser extension│ ◀────────────── │ (local)    │ ◀──────── │  + MCP         │
 └─────────────┘                     └──────────────────┘                 └────────────┘           └────────────────┘
 ```
 
 1. **You** describe a task in a supported AI chat.
-2. The **AI** replies with a snapgentV3 command.
+2. The **AI** replies with a NyxV2 command.
 3. The **extension** detects the command and forwards it to the local bridge.
 4. The **bridge** runs it against Roblox Studio through MCP.
 5. The **result** is sent back into chat, and the AI continues working.
@@ -110,11 +110,11 @@ The MCP target selector can also connect to VS Code or another MCP server after 
 
 **① Load the extension**
 
-1. Download and extract the [latest release](https://github.com/herdodp/snapgent-connector/releases).
+1. Download and extract the [latest release](https://github.com/SharkCreepy/NyxV2-connector/releases).
 2. Open `edge://extensions` (Edge) or `chrome://extensions` (Chrome).
 3. Enable **Developer mode**.
-4. Click **Load unpacked** and select the `snapgent-extension` folder.
-5. The snapgentV3 icon appears in your browser toolbar.
+4. Click **Load unpacked** and select the `NyxV2-extension` folder.
+5. The NyxV2 icon appears in your browser toolbar.
 
 **② Enable Roblox Studio MCP**
 
@@ -132,7 +132,7 @@ A window opens and stays open while the bridge runs. On macOS, the first launch 
 **④ Start a session**
 
 1. Open a supported AI chat site and start a new chat.
-2. Select **Roblox Studio** from the snapgentV3 MCP target menu.
+2. Select **Roblox Studio** from the NyxV2 MCP target menu.
 3. Click **Start** and describe what you want to make.
 
 ---
@@ -145,7 +145,7 @@ Once a session is running, just talk to the AI normally:
 
 > "Build a shop UI with buttons for the items in ReplicatedStorage."
 
-The AI sends commands, snapgentV3 runs them in Studio, and the results appear in chat. You can give the AI another instruction at any time.
+The AI sends commands, NyxV2 runs them in Studio, and the results appear in chat. You can give the AI another instruction at any time.
 
 **Tips**
 
@@ -162,7 +162,7 @@ The extension is split into a **provider-agnostic core** and **per-site provider
 
 ```
 core/config.js              system prompt, feedback, tool categories
-core/parser.js              snapgentV3 command parsing
+core/parser.js              NyxV2 command parsing
 core/main.js                agent loop, UI, session state
 providers/<site>.js         site-specific selectors and chat integration
 background.js               WebSocket connection to the local bridge
@@ -176,8 +176,8 @@ The bridge connects to Roblox Studio's MCP server and can route commands to othe
 ## `07` &nbsp; Project structure
 
 ```
-snapgent-full/
-├── snapgent-extension/        # Load this folder as an unpacked extension
+NyxV2-connector/
+├── NyxV2-extension/        # Load this folder as an unpacked extension
 │   ├── core/                  # Shared prompt, parser, agent loop, and UI
 │   ├── providers/             # Per-AI-site integrations
 │   ├── background.js          # Local bridge connection
@@ -195,12 +195,13 @@ snapgent-full/
 
 ## `08` &nbsp; Development
 
-Plain Node, no extra dependencies. Run from `snapgent-extension/`:
+Plain Node, no extra dependencies. Run from `NyxV2-extension/`:
 
 ```bash
 node test-parser.js
 node test-chatgpt.js
 node test-meta.js
+node test-claude.js
 ```
 
 Each test prints `PASS`/`FAIL` and exits with a non-zero status if a case fails.
@@ -217,10 +218,10 @@ Each test prints `PASS`/`FAIL` and exits with a non-zero status if a case fails.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| snapgentV3 bar is missing | Extension is disabled or site access is blocked | Check the extension is enabled and allowed on the current AI chat site, then reload the tab |
+| NyxV2 bar is missing | Extension is disabled or site access is blocked | Check the extension is enabled and allowed on the current AI chat site, then reload the tab |
 | Bridge is offline | Bridge is not running | Start `start.bat` (Windows) or `MacOS_Start.command` (macOS) |
 | Studio is not ready | No place is open or Studio MCP is disabled | Open a place and enable **Studio as MCP Server** in Assistant settings |
-| AI replies without using tools | Provider/model stopped following commands | Remind it to use snapgentV3 commands or start a new chat |
+| AI replies without using tools | Provider/model stopped following commands | Remind it to use NyxV2 commands or start a new chat |
 | VS Code does not appear as a target | Its MCP server has not been configured or connected | Configure the VS Code MCP server in the bridge, then reconnect |
 
 ---
@@ -236,6 +237,6 @@ Each test prints `PASS`/`FAIL` and exits with a non-zero status if a case fails.
 
 **Built for creators who want to spend more time making.**
 
-[Releases](https://github.com/herdodp/snapgent-connector/releases) · [Issues](https://github.com/herdodp/snapgent-connector/issues) · [License](LICENSE)
+[Releases](https://github.com/SharkCreepy/NyxV2-connector/releases) · [Issues](https://github.com/SharkCreepy/NyxV2-connector/issues) · [License](LICENSE)
 
 </div>

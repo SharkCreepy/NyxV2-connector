@@ -21,8 +21,12 @@ const ZSProvider = (() => {
     ].join(","),
     send: [
       'button[data-testid="send-button"]',
+      'button[data-testid*="send" i]',
       'button[aria-label="Send message"]',
       'button[aria-label="Send"]',
+      'button[aria-label*="send" i]',
+      '[role="button"][aria-label*="send" i]',
+      'button[title*="send" i]',
     ].join(","),
     stop: [
       'button[data-testid="stop-button"]',
@@ -40,6 +44,8 @@ const ZSProvider = (() => {
     REASON_NOREPLY_MS: 120000,
     STABLE_MS: 10000,
     RESPONSE_TIMEOUT_MS: 300000,
+    SEND_BUTTON_TIMEOUT_MS: 10000,
+    SEND_CONFIRM_TIMEOUT_MS: 5000,
   };
   const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
   const without = (root, excludeSel) => {
@@ -205,25 +211,61 @@ const ZSProvider = (() => {
     }
     if (locked) editor.setAttribute("contenteditable", "false");
   }
-  const sendButton = () => [...document.querySelectorAll(S.send)].find(visible) || null;
+  const sendButton = () => {
+    const editor = getEditor();
+    const form = editor && editor.closest("form");
+    const inComposer = (button) => visible(button) && !button.closest("#zs-root") &&
+      !button.closest(S.user) && !button.closest(S.assistant);
+    const semantic = [...document.querySelectorAll(S.send)].find(inComposer);
+    if (semantic) return semantic;
+    if (!form) return null;
+    return [...form.querySelectorAll('button[type="submit"], [role="button"][type="submit"]')]
+      .find(inComposer) || null;
+  };
+  const sendButtonReady = (button) => !!button && !button.disabled &&
+    button.getAttribute("aria-disabled") !== "true";
+  const sendAccepted = (beforeUsers) => editorText().trim() === "" ||
+    userCount() > beforeUsers || isHardGenerating();
+  async function submitComposerFallback(editor, beforeUsers) {
+    const accepted = () => sendAccepted(beforeUsers);
+    const form = editor.closest("form");
+    if (form && typeof form.requestSubmit === "function") {
+      try {
+        form.requestSubmit();
+        if (await waitFor(accepted, 1500)) return true;
+      } catch (error) {
+        diag("send.requestSubmitFailed", { message: String(error && error.message || error) });
+      }
+    }
+    const wasLocked = locked;
+    if (wasLocked) editor.setAttribute("contenteditable", "true");
+    try {
+      editor.focus();
+      const keyOptions = { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true };
+      editor.dispatchEvent(new KeyboardEvent("keydown", keyOptions));
+      editor.dispatchEvent(new KeyboardEvent("keyup", keyOptions));
+    } finally {
+      if (wasLocked) editor.setAttribute("contenteditable", "false");
+    }
+    return waitFor(accepted, timings.SEND_CONFIRM_TIMEOUT_MS);
+  }
   async function typeAndSend(text) {
     const editor = getEditor();
     if (!editor) throw new Error("Claude input box not found");
     const beforeUsers = userCount();
     writeText(editor, text);
-    const ready = await waitFor(() => {
-      const button = sendButton();
-      return !!button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
-    }, 10000);
+    if (!editorText().trim()) throw new Error("Claude composer did not accept the startup prompt");
+    const ready = await waitFor(() => sendButtonReady(sendButton()), timings.SEND_BUTTON_TIMEOUT_MS);
     const button = sendButton();
-    if (!ready || !button || button.disabled ||
-        button.getAttribute("aria-disabled") === "true") {
-      throw new Error("Claude send button did not become available");
+    if (ready && sendButtonReady(button)) {
+      button.click();
+      const sent = await waitFor(() => sendAccepted(beforeUsers), timings.SEND_CONFIRM_TIMEOUT_MS);
+      if (!sent) throw new Error("Claude did not accept the startup prompt after the send control was clicked");
+      return;
     }
-    button.click();
-    await waitFor(() =>
-      editorText().trim() === "" || userCount() > beforeUsers || isHardGenerating(),
-    5000);
+    diag("send.buttonUnavailable", { hasEditorText: !!editorText().trim(), hasForm: !!editor.closest("form") });
+    if (await submitComposerFallback(editor, beforeUsers)) return;
+    throw new Error("Claude's send control did not enable, and its composer did not accept the startup prompt. Reload the chat and try again.");
   }
   function stopGeneration() {
     const button = stopButton();

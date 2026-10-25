@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "snapgentV3 × Roblox Studio Agent",
+  "name": "NyxV2 × Roblox Studio Agent",
   "version": "3.0.0",
   "description": "Turn ChatGPT, Claude, DeepSeek, Gemini, Kimi, GLM, Qwen, Arena, Meta AI or Ptero into a Roblox Studio agent that drives Studio through a local bridge.",
   "permissions": ["storage"],
@@ -32,7 +32,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "snapgentV3",
+    "default_title": "NyxV2",
     "default_icon": {
       "16": "icon.png",
       "48": "icon.png",

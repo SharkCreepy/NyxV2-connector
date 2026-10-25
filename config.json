@@ -8,7 +8,7 @@
       "command": "vscode_mcp.exe",
       "args": [],
       "env": {
-        "VSCODE_WORKSPACE_PATH": "d:/project/snapgent"
+        "VSCODE_WORKSPACE_PATH": "d:/project/NyxV2-connector"
       }
     }
   }
