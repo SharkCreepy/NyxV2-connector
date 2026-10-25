@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "roblox": {
-      "command": "C:/Users/herdodp/AppData/Local/Roblox/Versions/version-7aaa6838d36c4448/StudioMCP.exe",
+      "command": "C:/Users/PC User/AppData/Local/Roblox/Versions/version-7aaa6838d36c4448/StudioMCP.exe",
       "args": ["--stdio"]
     },
     "vscode": {
