@@ -15,14 +15,20 @@ const ZSProvider = (() => {
     assistant: '[data-testid="assistant-message"]',
     editor: [
       '[data-testid="chat-input"] [contenteditable="true"]',
-      '[contenteditable="true"][data-placeholder]',
+      '[data-testid="chat-input"][contenteditable="true"]',
+      '[data-testid="chat-input"] [contenteditable="false"]',
+      '[data-testid="chat-input"][contenteditable="false"]',
+      'fieldset .ProseMirror',
       '.ProseMirror[contenteditable="true"]',
+      '[contenteditable="true"][data-placeholder]',
       'div[contenteditable="true"]',
     ].join(","),
     send: [
       'button[data-testid="send-button"]',
       'button[aria-label="Send message"]',
       'button[aria-label="Send"]',
+      'button[aria-label*="Send" i]',
+      'fieldset button[type="submit"]',
     ].join(","),
     stop: [
       'button[data-testid="stop-button"]',
@@ -42,6 +48,9 @@ const ZSProvider = (() => {
     RESPONSE_TIMEOUT_MS: 300000,
   };
   const visible = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
+  // Collapse all whitespace so ProseMirror's paragraph/newline rewriting
+  // (\n -> \n\n, trailing newlines, nbsp) never makes a good insert look failed.
+  const norm = (s) => String(s || "").replace(/[\s\u00a0]+/g, " ").trim();
   const without = (root, excludeSel) => {
     if (!root) return "";
     const skip = [".zs-chip", S.thinking, excludeSel].filter(Boolean).join(",");
@@ -184,46 +193,121 @@ const ZSProvider = (() => {
     lockedEditor = on ? editor : null;
     if (editor) editor.setAttribute("contenteditable", on ? "false" : "true");
   }
-  function writeText(editor, text) {
-    editor.focus();
-    editor.setAttribute("contenteditable", "true");
+
+  function selectAll(editor) {
     const selection = window.getSelection();
-    if (selection) {
-      const range = document.createRange();
-      range.selectNodeContents(editor);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-    const inserted = document.execCommand("insertText", false, text);
-    if (!inserted || editorText().trim() !== text.trim()) {
-      editor.textContent = text;
-      editor.dispatchEvent(new InputEvent("input", {
-        bubbles: true,
-        inputType: "insertText",
-        data: text,
-      }));
-    }
-    if (locked) editor.setAttribute("contenteditable", "false");
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
+  // True once the editor holds our text. Whitespace-insensitive, and tolerant of
+  // very long prompts where the editor may show them slightly differently.
+  const editorHas = (text) => {
+    const got = norm(editorText());
+    const want = norm(text);
+    if (!want) return got === "";
+    if (got === want) return true;
+    const head = want.slice(0, 80);
+    const tail = want.slice(-80);
+    return got.length >= want.length * 0.9 && got.startsWith(head) && got.endsWith(tail);
+  };
+
+  // Put `text` into Claude's ProseMirror composer WITHOUT corrupting its state.
+  // Order: execCommand (keeps undo + editor state) -> synthetic paste (ProseMirror
+  // handles paste natively) -> raw DOM write (last resort). Returns true on success.
+  async function writeText(editor, text) {
+    editor.setAttribute("contenteditable", "true");
+    editor.focus();
+    await sleep(30);
+
+    selectAll(editor);
+    try { document.execCommand("insertText", false, text); } catch (_) { /* fall through */ }
+    await sleep(60);
+    if (editorHas(text)) return true;
+
+    // Clear whatever partial insert happened, then try a paste event.
+    editor.focus();
+    selectAll(editor);
+    try { document.execCommand("delete", false); } catch (_) { /* ignore */ }
+    try {
+      const data = new DataTransfer();
+      data.setData("text/plain", text);
+      editor.dispatchEvent(new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }));
+    } catch (_) { /* ClipboardEvent ctor unsupported */ }
+    await sleep(120);
+    if (editorHas(text)) return true;
+
+    // Last resort: build paragraphs the way ProseMirror expects, then notify it.
+    editor.focus();
+    selectAll(editor);
+    try { document.execCommand("delete", false); } catch (_) { /* ignore */ }
+    editor.replaceChildren(...String(text).split("\n").map((line) => {
+      const p = document.createElement("p");
+      if (line) p.textContent = line; else p.appendChild(document.createElement("br"));
+      return p;
+    }));
+    editor.dispatchEvent(new InputEvent("beforeinput", {
+      bubbles: true, inputType: "insertText", data: text,
+    }));
+    editor.dispatchEvent(new InputEvent("input", {
+      bubbles: true, inputType: "insertText", data: text,
+    }));
+    await sleep(150);
+    return editorHas(text);
+  }
+
   const sendButton = () => [...document.querySelectorAll(S.send)].find(visible) || null;
+  const buttonReady = (button) => !!button && !button.disabled &&
+    button.getAttribute("aria-disabled") !== "true";
+  function pressEnter(editor) {
+    const opts = { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true };
+    editor.focus();
+    editor.dispatchEvent(new KeyboardEvent("keydown", opts));
+    editor.dispatchEvent(new KeyboardEvent("keypress", opts));
+    editor.dispatchEvent(new KeyboardEvent("keyup", opts));
+  }
+
   async function typeAndSend(text) {
-    const editor = getEditor();
+    let editor = getEditor();
     if (!editor) throw new Error("Claude input box not found");
     const beforeUsers = userCount();
-    writeText(editor, text);
-    const ready = await waitFor(() => {
-      const button = sendButton();
-      return !!button && !button.disabled && button.getAttribute("aria-disabled") !== "true";
-    }, 10000);
-    const button = sendButton();
-    if (!ready || !button || button.disabled ||
-        button.getAttribute("aria-disabled") === "true") {
-      throw new Error("Claude send button did not become available");
+
+    let wrote = await writeText(editor, text);
+    if (!wrote) {
+      // The composer may have re-rendered mid-write; re-resolve and retry once.
+      await sleep(300);
+      editor = getEditor();
+      if (!editor) throw new Error("Claude input box not found");
+      wrote = await writeText(editor, text);
     }
-    button.click();
-    await waitFor(() =>
-      editorText().trim() === "" || userCount() > beforeUsers || isHardGenerating(),
+    if (!wrote) {
+      diag("claude.write_failed", { want: norm(text).length, got: norm(editorText()).length });
+      throw new Error("Claude composer did not accept the startup prompt");
+    }
+    // Keep the lock semantics: user input is blocked again while we wait to send.
+    if (locked) editor.setAttribute("contenteditable", "false");
+
+    const ready = await waitFor(() => buttonReady(sendButton()), 6000);
+    const button = sendButton();
+    if (ready && button) {
+      button.click();
+    } else {
+      // Send button not found/enabled (UI change): fall back to pressing Enter.
+      diag("claude.send_fallback_enter", { hasButton: !!button });
+      editor.setAttribute("contenteditable", "true");
+      pressEnter(editor);
+      if (locked) editor.setAttribute("contenteditable", "false");
+    }
+    const sent = await waitFor(() =>
+      norm(editorText()) === "" || userCount() > beforeUsers || isHardGenerating(),
     5000);
+    if (!sent) throw new Error("Claude send button did not become available");
   }
   function stopGeneration() {
     const button = stopButton();
@@ -231,7 +315,8 @@ const ZSProvider = (() => {
   }
   const enforceComposer = () => ({ ready: !!getEditor() });
   async function ensureComposerReady(reason) {
-    const ready = !!getEditor();
+    // The composer can mount a moment after the page does; give it a few seconds.
+    const ready = !!getEditor() || await waitFor(() => !!getEditor(), 5000);
     diag("mode_ready", { reason, provider: "claude", ready });
     return { ready };
   }
