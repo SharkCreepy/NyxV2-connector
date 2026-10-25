@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul
-title Snapgent Bridge
+title NyxV2 Bridge
 cd /d "%~dp0"
 
 if not exist "%~dp0logs" mkdir "%~dp0logs" >nul 2>nul
@@ -29,7 +29,7 @@ if defined OLDPID (
 
 echo.
 echo   +--------------------------------------------------+
-echo   ^| Snapgent is now running.                         ^|
+echo   ^| NyxV2 is now running.                         ^|
 echo   ^| Keep this window open while you use the agent.   ^|
 echo   ^| Minimise it freely - closing it stops the bridge.^|
 echo   +--------------------------------------------------+
