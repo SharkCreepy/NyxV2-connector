@@ -14,6 +14,9 @@ const ZSProvider = (() => {
     user: '[data-testid="user-message"]',
     assistant: '[data-testid="assistant-message"]',
     editor: [
+      'textarea[data-testid="static-composer-input"]',
+      'textarea[data-testid="chat-input"]',
+      'textarea[aria-label*="prompt" i]',
       '[data-testid="chat-input"] [contenteditable="true"]',
       '[contenteditable="true"][data-placeholder]',
       '.ProseMirror[contenteditable="true"]',
@@ -105,7 +108,9 @@ const ZSProvider = (() => {
   }
   const editorText = () => {
     const editor = getEditor();
-    return editor ? (editor.innerText || editor.textContent || "") : "";
+    if (!editor) return "";
+    if (editor.value != null) return String(editor.value);
+    return editor.innerText || editor.textContent || "";
   };
   const isFreshChat = () => chatIsEmpty() && !!getEditor();
   const composerFrame = () => {
@@ -188,10 +193,31 @@ const ZSProvider = (() => {
     const editor = on ? getEditor() : (lockedEditor || getEditor());
     locked = on;
     lockedEditor = on ? editor : null;
-    if (editor) editor.setAttribute("contenteditable", on ? "false" : "true");
+    if (!editor) return;
+    if (editor.tagName === "TEXTAREA" || editor.tagName === "INPUT") {
+      if (on) editor.setAttribute("readonly", "");
+      else editor.removeAttribute("readonly");
+    } else {
+      editor.setAttribute("contenteditable", on ? "false" : "true");
+    }
   }
   function writeText(editor, text) {
     editor.focus();
+    if (editor.tagName === "TEXTAREA" || editor.tagName === "INPUT") {
+      const wasLocked = locked;
+      if (wasLocked) editor.removeAttribute("readonly");
+      const ctor = editor.tagName === "INPUT" ? window.HTMLInputElement : window.HTMLTextAreaElement;
+      const setter = ctor && Object.getOwnPropertyDescriptor(ctor.prototype, "value");
+      if (setter && setter.set) setter.set.call(editor, text);
+      else editor.value = text;
+      editor.dispatchEvent(new InputEvent("input", {
+        bubbles: true,
+        inputType: "insertText",
+        data: text,
+      }));
+      if (wasLocked) editor.setAttribute("readonly", "");
+      return;
+    }
     editor.setAttribute("contenteditable", "true");
     const selection = window.getSelection();
     if (selection) {
@@ -238,14 +264,20 @@ const ZSProvider = (() => {
       }
     }
     const wasLocked = locked;
-    if (wasLocked) editor.setAttribute("contenteditable", "true");
+    if (wasLocked) {
+      if (editor.tagName === "TEXTAREA" || editor.tagName === "INPUT") editor.removeAttribute("readonly");
+      else editor.setAttribute("contenteditable", "true");
+    }
     try {
       editor.focus();
       const keyOptions = { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true };
       editor.dispatchEvent(new KeyboardEvent("keydown", keyOptions));
       editor.dispatchEvent(new KeyboardEvent("keyup", keyOptions));
     } finally {
-      if (wasLocked) editor.setAttribute("contenteditable", "false");
+      if (wasLocked) {
+        if (editor.tagName === "TEXTAREA" || editor.tagName === "INPUT") editor.setAttribute("readonly", "");
+        else editor.setAttribute("contenteditable", "false");
+      }
     }
     return waitFor(accepted, timings.SEND_CONFIRM_TIMEOUT_MS);
   }

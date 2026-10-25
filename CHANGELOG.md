@@ -2,6 +2,15 @@
 
 All notable changes to NyxV2 Free are documented here.
 
+## [3.0.1] - 2026-10-25
+
+### Fixed
+- **Claude startup: detect and write to the actual static composer textarea.**
+  Claude's current composer uses `textarea[data-testid="static-composer-input"]`,
+  not only a `contenteditable` element. NyxV2 now supports the textarea's native
+  value setter and React input event, and locks it with `readonly` while the
+  agent is active.
+
 ## [3.0.0] - 2026-10-25
 
 ### Changed
